@@ -38,6 +38,8 @@ int main(int argc, char const *argv[]) {
 	allocateProcess(32);
 	allocateProcess(33);
 	allocateProcess(34);
+	deallocateProcess(31);
+	allocateProcess(35);
 	printTable();
 	return 0;
 }

@@ -15,9 +15,14 @@ void initTable() {
     for (int i = 0; i < MAX_PROCESS; i++) {
         processTables[i].nextFree = 0;
         processTables[i].pagesUsed = 0;
-        for (int j = 0; j < MAX_PROCESS_PAGES; j++) {
+        for (int j = 0; j < MAX_PAGES; j++) {
             processTables[i].pages[j] = -1;
         }
+        // processTables[i].swap = NULL;
+        // processTables[i].swapedPages = 0;
+        // for (int j = 0; j < MAX_PAGES; j++) {
+        //     processTables[i].swapPageId[j] = -1;
+        // }
     }
 }
 
@@ -42,47 +47,51 @@ void insertTableData(uint8_t page) {
 int getNextFreePage() {
     int result = nextFreePage;
 	nextFreePage = (nextFreePage + 1) % MAX_PAGES;
-    if (usedPages[result] == 0) 
+    if (usedPages[result] == 0) {
     	return result;
+    }
+    else {
+        for (int i = 0; i < MAX_PAGES; i++) {
+            if (usedPages[i] == 0)
+                return i;
+        }
+    }
     return -1;
 }
 
-void dealocatePage(int pid, uint8_t page) {
-
-}
-
 void allocateProcess(int pid) {
-	int processSize = rand() % 500000 + 1, page;
+	int processSize = rand() % 700000 + 1, page;
 	if (processSize != 0) {
 		while (processSize > 0) {
 			page = getNextFreePage();
-            if (page < 0) {
-                // deal with no free page;
-                break;
+            while (page < 0) {
+                sleep(1);
+    			page = getNextFreePage();                
             }
-            else {
-                if (processTables[pid].pagesUsed < MAX_PROCESS_PAGES) {
-                    processTables[pid].pages[processTables[pid].nextFree] = page;
-                    processTables[pid].pagesUsed++;
-                    for (int i = 0; i < MAX_PROCESS_PAGES; i++ ) {
-                        if (processTables[pid].pages[i] == -1) {
-                            processTables[pid].nextFree = i;
-                            break;
-                        }
-                    }
-                    usedPages[page] = 1;
-                    insertTableData(page);
-                    processSize -= PAGE_SIZE;
-                }
-                else {
-                    printf("Falhou, sem mais páginas disponíveis para o processo.\n");
+            processTables[pid].pages[processTables[pid].nextFree] = page;
+            processTables[pid].pagesUsed++;
+            // processTables[pid].timeOfPages[processTables[pid].nextFree] = clock();
+            for (int i = 0; i < MAX_PAGES; i++ ) {
+                if (processTables[pid].pages[i] == -1) {
+                    processTables[pid].nextFree = i;
+                    break;
                 }
             }
+            usedPages[page] = 1;
+            insertTableData(page);
+            processSize -= PAGE_SIZE;
 		}
 	}
 }
 
-void dealocateProcess(int pid) {
+void deallocateProcess(int pid) {
+    for (int i = 0; i < processTables[pid].pagesUsed; i++) {
+        usedPages[processTables[pid].pages[i]] = 0;
+        if (nextFreePage > processTables[pid].pages[i])
+            nextFreePage = processTables[pid].pages[i];
+        processTables[pid].pages[i] = -1;
+    }
+    processTables[pid].pagesUsed = 0;
 }
 
 void decToBin(size_t num, char *output) {
@@ -97,3 +106,47 @@ void decToBin(size_t num, char *output) {
 		count--;
 	}
 }
+// ignore swap and LRU, but well, i'll leave it here.
+
+// int getLRUPage(int pid) {
+//     clock_t c = clock();
+//     int result = -1;
+//     for (int i = 0; i < processTables[pid].pagesUsed; i++) {
+//         if (processTables[pid].timeOfPages[i] < c) {
+//             c = processTables[pid].timeOfPages[i];
+//             result = i;
+//         }
+//     }
+//     return result;
+// }
+
+// void swapOutProcess(int pid) {
+//     int page = getLRUPage(pid);
+//     printf("swapping...");
+//     if (processTables[pid].swap == NULL) {
+//         char buffer[10];
+//         sprintf(buffer, "%d", pid);
+//         const char* filename = strcat(SWAP_AREA, buffer);
+//         processTables[pid].swap = fopen(filename, "wb");
+//     }
+//     fseek(processTables[pid].swap, PAGE_SIZE * processTables[pid].swapedPages, SEEK_SET);
+//     fwrite((void *) table[page].data, sizeof(uint8_t), PAGE_SIZE, processTables[pid].swap);
+//     processTables[pid].swapPageId[page] = processTables[pid].swapedPages;
+//     for (int i = 0; i < MAX_PROCESS_PAGES; i++) {
+//         if (processTables[pid].pages[i] == page) {
+//             processTables[pid].nextFree = i;
+//         }
+//     }
+//     processTables[pid].swapedPages++;
+// }
+
+// void swapInProcess(int pid, int page) {
+//     if (processTables[pid].swap != NULL) {
+//         if (processTables[pid].swapPageId[page] != -1) {
+//             fseek(processTables[pid].swap, PAGE_SIZE * (processTables[pid].swapPageId[page]), SEEK_SET);
+//             fread((void *) table[page].data, sizeof(uint8_t), PAGE_SIZE, processTables[pid].swap);
+//             processTables[pid].swapedPages--;
+//             processTables[pid].swapPageId[page] = -1;
+//         }
+//     }
+// }
