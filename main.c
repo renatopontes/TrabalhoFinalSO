@@ -1,6 +1,7 @@
 #include "memoryManager.h"
 
 int main(int argc, char const *argv[]) {
+	srand(time(NULL));
 	initTable(table, MAX_PAGES);
 	allocateProcess(0);
 	allocateProcess(1);

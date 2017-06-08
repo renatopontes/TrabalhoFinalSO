@@ -52,7 +52,7 @@ void dealocatePage(int pid, uint8_t page) {
 }
 
 void allocateProcess(int pid) {
-	int processSize = 500000 + 1, page;
+	int processSize = rand() % 500000 + 1, page;
 	if (processSize != 0) {
 		while (processSize > 0) {
 			page = getNextFreePage();
