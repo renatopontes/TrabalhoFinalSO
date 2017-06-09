@@ -16,13 +16,16 @@ void defaultProcess(void *args) {
     while (stop) {
         if (self->processSize > 0) {
             newPage = rand() % MAX_PAGES;
-            allocatePage(self->pid, newPage);
-            self->processSize -= PAGE_SIZE;
+            if (allocatePage(self->pid, newPage))
+                self->processSize -= PAGE_SIZE;
         }
         sleep(rand() % 2 + 1);
-        if (rand() % 3) {
-            deallocatePage(self->pid, processTables[self->pid].pages[rand() % processTables[self->pid].pagesUsed]);
-            self->processSize += PAGE_SIZE;
+        if (processTables[self->pid].pagesUsed > 0) {
+            if (rand() % 3) {
+                newPage = processTables[self->pid].pages[rand() % processTables[self->pid].pagesUsed];
+                deallocatePage(self->pid, newPage);
+                self->processSize += PAGE_SIZE;
+            }
         }
     }
     deallocateProcess(self->pid);
@@ -41,7 +44,7 @@ fprocess* initProcess() {
     fprocess *new;
     new = (fprocess*) malloc(sizeof(fprocess));
     new->pid = qntProcesses;
-    new->processSize = rand() % 100000 + 1;
+    new->processSize = rand() % 1000000 + 1;
     new->func = &defaultProcess;
     new->t = (pthread_t *) malloc(sizeof(pthread_t));
     pthread_create(new->t, NULL, (void *)(void *) new->func, (void *) new);

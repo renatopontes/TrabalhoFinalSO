@@ -38,7 +38,7 @@ void insertTableData(uint8_t page);
 int getNextFreePage();
 void allocateProcess(int pid);
 void deallocateProcess(int pid);
-void allocatePage(int pid, uint8_t page);
+int allocatePage(int pid, uint8_t page);
 void deallocatePage(int pid, uint8_t page);
 
 void decToBin(size_t num, char *output);

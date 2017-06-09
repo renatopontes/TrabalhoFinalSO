@@ -61,9 +61,10 @@ int getNextFreePage() {
 }
 
 
-void allocatePage(int pid, uint8_t page) {
+int allocatePage(int pid, uint8_t page) {
     if (usedPages[page] != 0) {
-        printf("Page fault! Process %d on page %u.", pid, page);
+        printf("Page fault! Process %d on page %u.\n", pid, page);
+        return 0;
     }
     else {
         processTables[pid].pages[processTables[pid].nextFree] = page;
@@ -77,20 +78,23 @@ void allocatePage(int pid, uint8_t page) {
         }
         usedPages[page] = 1;
         insertTableData(page);
+        return 1;
     }
 }
 
 void deallocatePage(int pid, uint8_t page) {
     for (int i = 0; i < processTables[pid].pagesUsed; i++) {
         if (processTables[pid].pages[i] == page) {
-            usedPages[processTables[pid].pages[i]] = 0;
-            processTables[pid].pages[i] = -1;
-            processTables[pid].pagesUsed--;
-            if (i < processTables[pid].nextFree)
-                processTables[pid].nextFree = i;
-            break;        
+            usedPages[page] = 0;
+            int j = i;
+            while (j < MAX_PAGES - 1 || (processTables[pid].pages[j] != -1 && i != j)) {
+                processTables[pid].pages[j] = processTables[pid].pages[j + 1];
+                j++;
+            }
+            processTables[pid].nextFree--;
         }
     }
+    processTables[pid].pagesUsed--;    
 }
 
 void allocateProcess(int pid) {
