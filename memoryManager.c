@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <unistd.h>
 #include "memoryManager.h"
 
 void initTable() {
@@ -59,8 +60,41 @@ int getNextFreePage() {
     return -1;
 }
 
+
+void allocatePage(int pid, uint8_t page) {
+    if (usedPages[page] != 0) {
+        printf("Page fault! Process %d on page %u.", pid, page);
+    }
+    else {
+        processTables[pid].pages[processTables[pid].nextFree] = page;
+        processTables[pid].pagesUsed++;
+        // processTables[pid].timeOfPages[processTables[pid].nextFree] = clock();
+        for (int i = 0; i < MAX_PAGES; i++ ) {
+            if (processTables[pid].pages[i] == -1) {
+                processTables[pid].nextFree = i;
+                break;
+            }
+        }
+        usedPages[page] = 1;
+        insertTableData(page);
+    }
+}
+
+void deallocatePage(int pid, uint8_t page) {
+    for (int i = 0; i < processTables[pid].pagesUsed; i++) {
+        if (processTables[pid].pages[i] == page) {
+            usedPages[processTables[pid].pages[i]] = 0;
+            processTables[pid].pages[i] = -1;
+            processTables[pid].pagesUsed--;
+            if (i < processTables[pid].nextFree)
+                processTables[pid].nextFree = i;
+            break;        
+        }
+    }
+}
+
 void allocateProcess(int pid) {
-	int processSize = rand() % 700000 + 1, page;
+	int processSize = rand() % 1000000 + 1, page;
 	if (processSize != 0) {
 		while (processSize > 0) {
 			page = getNextFreePage();
