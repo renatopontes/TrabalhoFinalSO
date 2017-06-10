@@ -13,7 +13,7 @@
 
 TARGET   = memory-manager
 CC       = gcc
-CFLAGS   = -std=c99 -Wall -I. -g
+CFLAGS   = -std=c99 -Wall -I. -I include -g
 
 LINKER   = gcc
 LFLAGS   = -Wall -I. -lpthread
