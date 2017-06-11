@@ -15,11 +15,11 @@ int main(int argc, char const *argv[]) {
         policy = WAIT;
     }
 
-	srand(time(NULL));
-	init_memory(&mem);
+    srand(time(NULL));
+    init_memory(&mem);
     init_proc_table();
     init_queue(&queue);
     prompt_loop();
 
-	return 0;
+    return 0;
 }

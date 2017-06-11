@@ -15,7 +15,7 @@
 
 #define ARCH 16
 #define MEM_SIZE (1<<ARCH)
-#define FRAME_SIZE_PWR 10
+#define FRAME_SIZE_PWR 11
 #define FRAME_SIZE (1<<FRAME_SIZE_PWR)
 #define N_FRAMES (1<<(ARCH-FRAME_SIZE_PWR))
 #define BUFFER_SIZE 128

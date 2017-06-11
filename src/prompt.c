@@ -81,7 +81,7 @@ void print_memory() {
 }
 
 void print_page_table(pid_t pid) {
-    if (pid >= proc_table->size || !proc_table->table[pid]) {
+    if (pid >= proc_table->allc || !proc_table->table[pid]) {
         printf(INFO_ERR "P%03d não existe\n", pid);
         return;
     }
