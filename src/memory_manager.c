@@ -80,21 +80,21 @@ void proc_load(size_t size) {
         size = rand() % (free_memory > 1 ? free_memory/2 : (MEM_SIZE/2)) + 1;
 
     if (size > free_memory && (policy == DENY || size > MEM_SIZE) ) {
-        printf("   ✘   Sem memória disponível. O processo não será iniciado.\n");
+        printf(INFO_ERR "Sem memória disponível. O processo não será iniciado.\n");
         return;
     }
 
     init_process(&proc, size);
     proc_table_add(proc);
-    printf("   ✔   Novo processo P%03d criado (%lu B, %lu páginas, %d seg)\n",
+    printf(INFO_OK "Novo processo P%03d criado (%lu B, %lu páginas, %d seg)\n",
         proc->pid, proc->proc_size, proc->page_table->size, proc->exec_time);
 
     if (proc->page_table->size <= mem->free_frames) {
         allocate_frames(proc);
-        printf("   ✔   P%03d está carregado na memória.\n", proc->pid);
-        printf("   🛈   %lu frames livres\n", mem->free_frames);
+        printf(INFO_OK "P%03d está carregado na memória.\n", proc->pid);
+        printf(INFO_WARN "%lu frames livres\n", mem->free_frames);
     } else {
-        printf("   🛈   P%03d foi colocado na fila.\n", proc->pid);
+        printf(INFO_WARN "P%03d foi colocado na fila.\n", proc->pid);
         queue_push(queue, proc);
     }
 }
@@ -129,16 +129,16 @@ void translate_relative_address(pid_t pid, addr_t rel_addr) {
     addr_t page = rel_addr >> FRAME_SIZE_PWR;
     addr_t offset = rel_addr & (FRAME_SIZE-1);
 
-    printf("   🛈   P%03d referencia endereço %lu\n", pid, (uint64_t)rel_addr);
+    printf(INFO_WARN "P%03d referencia endereço %lu\n", pid, (uint64_t)rel_addr);
 
     if (page*FRAME_SIZE + offset >= proc_table->table[pid]->proc_size) {
-        printf("   ✘   P%03d: segmentation fault\n\n", pid);
+        printf(INFO_ERR "P%03d: segmentation fault\n\n", pid);
         return;
     }
 
     frame_t frame = proc_table->table[pid]->page_table->table[page];
     addr_t abs_addr = (frame << FRAME_SIZE_PWR) + offset;
-    printf("   ✔   Endereço físico %lu (frame: %lu, offset: %lu)\n\n",
+    printf(INFO_OK "Endereço físico %lu (frame: %lu, offset: %lu)\n\n",
         (uint64_t) abs_addr, (uint64_t)frame, (uint64_t)offset);
 }
 
@@ -156,7 +156,7 @@ void update() {
         if (proc && proc->start_time != -1 && proc->exec_time + proc->start_time <= step) {
             Page_table *pt = proc->page_table;
 
-            printf("   🛈   P%03d terminou. Desalocando %lu frame%s.\n",
+            printf(INFO_WARN "P%03d terminou. Desalocando %lu frame%s.\n",
                 proc->pid, pt->size, pt->size > 1 ? "s" : "");
             
             deallocate_frames(proc_table->table[i]);
@@ -167,18 +167,18 @@ void update() {
             if (i < proc_table->first_available_pid)
                 proc_table->first_available_pid = i;
 
-            printf("   🛈   %lu frames livres\n\n", mem->free_frames);
+            printf(INFO_WARN "%lu frames livres\n\n", mem->free_frames);
             usleep(PAUSE_BETWEEN_INFO);
         }
 
         while (next_proc && mem->free_frames*FRAME_SIZE >= next_proc->proc_size) {
             Page_table *pt = next_proc->page_table;
-            printf("   🛈   Foi liberado espaço para P%03d (%lu B, %lu páginas, %d seg)\n",
+            printf(INFO_WARN "Foi liberado espaço para P%03d (%lu B, %lu páginas, %d seg)\n",
                 next_proc->pid, next_proc->proc_size, pt->size, next_proc->exec_time);
             queue_pop(queue);
             allocate_frames(next_proc);
-            printf("   ✔   P%03d está carregado na memória.\n", next_proc->pid);
-            printf("   🛈   %lu frames livres\n\n", mem->free_frames);
+            printf(INFO_OK "P%03d está carregado na memória.\n", next_proc->pid);
+            printf(INFO_WARN "%lu frames livres\n\n", mem->free_frames);
             if (queue_size(queue))
                 next_proc = queue_top(queue);
             else

@@ -4,7 +4,7 @@ size_t cols;
 
 void print_help() {
     printf(
-        " Comando    Descrição\n\n"
+    BOLD    " Comando    Descrição\n\n" RESET
         " q, quit    Termina o programa\n\n"
         " h, help    Exibe esta mensagem\n\n"
         " i, info    Exibe informações sobre o sistema\n\n"
@@ -43,7 +43,7 @@ void print_separator(char tok) {
 
 void print_system_info() {
     print_separator('=');
-    printf(" Informações do sistema\n");
+    printf(BOLD " Informações do sistema\n" RESET);
     print_separator('-');
     printf(
         "  Modo %s\n"
@@ -59,7 +59,7 @@ void print_system_info() {
 
 void print_memory() {
     print_separator('=');
-    printf(" Memória principal\n");
+    printf(BOLD " Memória principal\n" RESET);
     print_separator('-');
     for (size_t i = 0; i < N_FRAMES; i += FRAMES_PER_LINE) {
         if (i > 0) puts("");
@@ -82,11 +82,11 @@ void print_memory() {
 
 void print_page_table(pid_t pid) {
     if (pid >= proc_table->size || !proc_table->table[pid]) {
-        printf("   ✘   P%03d não está na memória\n", pid);
+        printf(INFO_ERR "P%03d não existe\n", pid);
         return;
     }
     print_separator('=');
-    printf(" Tabela de páginas de P%03d\n"
+    printf(BOLD " Tabela de páginas de P%03d\n" RESET
         " Tamanho: %lu B      Na memória: %s\n",
         pid, proc_table->table[pid]->proc_size, proc_table->table[pid]->start_time != -1 ? "sim" : "não");
     print_separator('-');
@@ -120,7 +120,7 @@ void prompt_loop() {
     char cmd[BUFFER_SIZE] = {'\0'};
     cols = colunas();
 
-    system("clear");
+    system("tput reset");
     print_system_info(mem);
     puts("");
     while (1) {
@@ -169,14 +169,14 @@ void prompt_loop() {
             if (sscanf(&buff[strlen(cmd)], "%d", &pid) == 1)
                 print_page_table(pid);
             else
-                printf("⮡ Bad option\n");
+                printf(INFO_ERR "Comando inválido. Use paget <pid>.\n");
         }
         else if (!strcmp(cmd, "clear")) {
             system("clear");
         }
         else if (!strcmp(cmd, "")) {}
         else {
-            printf("   ✘   Comando inválido. Use h para ver uma lista de comandos válidos.\n");
+            printf(INFO_ERR "Comando inválido. Use h para ver uma lista de comandos válidos.\n");
             cmd[0] = '\0';
         }
     }

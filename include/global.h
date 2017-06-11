@@ -27,6 +27,22 @@
 #define PAUSE_STEP 350000
 #define PAUSE_BETWEEN_INFO 200000
 
+#define BLACK           "\x1B[30m"
+#define RED             "\x1B[31m"
+#define GREEN           "\x1B[32m"
+#define YELLOW          "\x1B[33m"
+#define BLUE            "\x1B[34m"
+#define MAGENTA         "\x1B[35m"
+#define CYAN            "\x1B[36m"
+#define WHITE           "\x1B[37m"
+
+#define RESET           "\x1B[0m"
+#define BOLD            "\x1B[1m"
+
+#define INFO_OK			GREEN "   ✔   " RESET
+#define INFO_WARN		WHITE "   🛈   " RESET
+#define INFO_ERR		RED "   ✘   " RESET
+
 #define CHECK_PTR(p) {\
 	if (!(p)) {\
 		printf("ERROR for " #p "@%s: %s\n", __func__, strerror(errno));\
