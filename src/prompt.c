@@ -1,80 +1,114 @@
-#include "output.h"
-#include "memory_manager.h"
+#include "prompt.h"
+
+size_t cols;
 
 void print_help() {
     printf(
-        "Comando    Descrição\n"
-        "q, quit    Termina o programa\n\n"
-        "h, help    Exibe esta mensagem\n\n"
-        "i, info    Exibe informações sobre o sistema\n\n"
-        "mem        Exibe os frames da memória\n\n"
-        "paget      Exibe tabela de páginas do processo <id>\n"
-        "           id: PID do processo\n\n"
-        "s, step    Continua a simulação por <t> unidades de tempo\n"
-        "           t: quantidade de tempo para rodar. (default: 1)\n\n"
-        "l, load    Carrega na memória um processo de tamanho <b>\n"
-        "           b: tamanho em bytes do processo (default: pseudo-aleatório)\n\n"
-        "r, ref     O processo <id> faz referência a um endereço\n"
-        "             lógico <p> <o> OU relativo <r>\n"
-        "           id: PID do processo\n"
-        "           p: índice da página\n"
-        "           o: offset dentro da página\n"
-        "           r: endereço relativo\n"
+        " Comando    Descrição\n\n"
+        " q, quit    Termina o programa\n\n"
+        " h, help    Exibe esta mensagem\n\n"
+        " i, info    Exibe informações sobre o sistema\n\n"
+        " mem        Exibe os frames da memória\n\n"
+        " paget      Exibe tabela de páginas do processo <id>\n"
+        "            id: PID do processo\n\n"
+        " s, step    Continua a simulação por <t> unidades de tempo\n"
+        "            t: quantidade de tempo para rodar. (default: 1)\n\n"
+        " l, load    Carrega na memória um processo de tamanho <b>\n"
+        "            b: tamanho em bytes do processo (default: pseudo-aleatório)\n\n"
+        " r, ref     O processo <id> faz referência a um endereço\n"
+        "              lógico <p> <o> OU relativo <r>\n"
+        "            id: PID do processo\n"
+        "            p: índice da página\n"
+        "            o: offset dentro da página\n"
+        "            r: endereço relativo\n"
         );
 }
 
+size_t colunas() {
+  size_t col;
+
+  FILE *fp = popen("tput cols", "r");
+  CHECK_PTR(fp);
+  
+  fscanf(fp, "%lu", &col);
+  
+  return col;
+}
+
+void print_separator(char tok) {
+    for (int i = 0; i < cols; ++i)
+        putchar(tok);
+    putchar('\n');
+}
+
 void print_system_info() {
+    print_separator('=');
+    printf(" Informações do sistema\n");
+    print_separator('-');
     printf(
-        "Informações do sistema\n"
-        "Tamanho da memória principal: %d bytes\n"
-        "Tamanho do frame: %d bytes\n"
-        "Número de frames: %d\n"
-        , MEM_SIZE, FRAME_SIZE, N_FRAMES
+        "  Modo %s\n"
+        "  Tamanho da memória principal: %d bytes\n"
+        "  Tamanho do frame: %d bytes\n"
+        "  Número de frames: %d\n"
+        "  Processos na memória: %lu\n"
+        "  Total de processos: %lu\n"
+        , policy == WAIT ? "WAIT" : "DENY", MEM_SIZE, FRAME_SIZE, N_FRAMES, mem->processes, proc_table->size
     );
+    print_separator('=');
 }
 
 void print_memory() {
-    printf("Memória principal\n=================\n");
+    print_separator('=');
+    printf(" Memória principal\n");
+    print_separator('-');
     for (size_t i = 0; i < N_FRAMES; i += FRAMES_PER_LINE) {
-        printf("Frame    ");
+        if (i > 0) puts("");
+        printf("  Frame    ");
         for (frame_t j = i; j < i+FRAMES_PER_LINE && j < N_FRAMES; ++j) {
             printf("%4d ", j);
         }
         puts("");
-        printf("PID      ");
+        printf("  PID      ");
         for (frame_t j = i; j < i+FRAMES_PER_LINE && j < N_FRAMES; ++j) {
             if (mem->used_frames[j] != -1)
                 printf("%4d ", mem->used_frames[j]);
             else
                 printf("  -- ");
         }
-        puts("\n");
+        puts("");
     }
+    print_separator('=');
 }
 
 void print_page_table(pid_t pid) {
-    printf("Tabela de páginas de P%03d\n=========================\n", pid);
     if (pid >= proc_table->size || !proc_table->table[pid]) {
         printf("   ✘   P%03d não está na memória\n", pid);
         return;
     }
+    print_separator('=');
+    printf(" Tabela de páginas de P%03d\n"
+        " Tamanho: %lu B      Na memória: %s\n",
+        pid, proc_table->table[pid]->proc_size, proc_table->table[pid]->start_time != -1 ? "sim" : "não");
+    print_separator('-');
     Process *proc = proc_table->table[pid];
     size_t page_table_size = proc->page_table->size;
     for (size_t i = 0; i < page_table_size; i += FRAMES_PER_LINE) {
-        printf("Page     ");
+        if (i > 0) puts("");
+        printf("  Page     ");
         for (frame_t j = i; j < i+FRAMES_PER_LINE && j < page_table_size; ++j) {
             printf("%4d ", j);
         }
         puts("");
-        printf("Frame    ");
+        printf("  Frame    ");
         for (frame_t j = i; j < i+FRAMES_PER_LINE && j < page_table_size; ++j) {
             if (proc->page_table->table[j] != -1)
                 printf("%4d ", proc->page_table->table[j]);
             else
                 printf("  -- ");
         }
-        puts("\n");
+        puts("");
     }
+    print_separator('=');
 }
 
 void print_time(char end[]) {
@@ -84,8 +118,9 @@ void print_time(char end[]) {
 void prompt_loop() {
     char buff[BUFFER_SIZE];
     char cmd[BUFFER_SIZE] = {'\0'};
+    cols = colunas();
 
-    // system("clear");
+    system("clear");
     print_system_info(mem);
     puts("");
     while (1) {
@@ -123,7 +158,7 @@ void prompt_loop() {
                 step++;
                 print_time("\n");
                 update();
-                usleep(PAUSE_TIME);
+                usleep(PAUSE_STEP);
             }
         }
         else if (!strcmp(cmd, "mem")) {

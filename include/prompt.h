@@ -1,12 +1,13 @@
 #ifndef OUTPUT_H
 #define OUTPUT_H
 
-#define _GNU_SOURCE
-
 #include "global.h"
+#include "memory_manager.h"
 
-#define PAUSE_TIME 450000
+extern size_t cols;
 
+size_t colunas();
+void print_separator(char tok);
 void print_help();
 void print_system_info();
 void print_memory();

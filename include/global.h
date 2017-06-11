@@ -1,6 +1,8 @@
 #ifndef GLOBAL_H
 #define GLOBAL_H
 
+#define _GNU_SOURCE
+
 #include <errno.h>
 #include <pthread.h>
 #include <stdbool.h>
@@ -19,8 +21,11 @@
 #define BUFFER_SIZE 128
 #define GROWTH_RATE 1.5
 #define MAX_EXEC_TIME 16
-#define LAUNCH_INTERVAL 3
 #define FRAMES_PER_LINE 12
+#define DENY 0
+#define WAIT 1
+#define PAUSE_STEP 350000
+#define PAUSE_BETWEEN_INFO 200000
 
 #define CHECK_PTR(p) {\
 	if (!(p)) {\
@@ -44,6 +49,7 @@ typedef int64_t frame_t;
 typedef struct Memory {
     pid_t *used_frames;
     size_t free_frames;
+    size_t processes;
 } Memory;
 
 typedef struct Page_table {
@@ -54,9 +60,8 @@ typedef struct Page_table {
 typedef struct Process {
 	pid_t pid;
 	size_t proc_size;
-	uint32_t exec_time;
-    uint32_t start_time;
-    bool running;
+	int32_t exec_time;
+    int32_t start_time;
 	Page_table *page_table;
 } Process;
 
@@ -67,8 +72,12 @@ typedef struct Process_table {
     pid_t first_available_pid;
 } Process_table;
 
+typedef struct Queue Queue;
+
 extern uint32_t step;
+extern uint8_t policy;
 extern Memory *mem;
 extern Process_table *proc_table;
+extern Queue *queue;
 
 #endif

@@ -2,7 +2,7 @@
 #define MEMORY_MANAGER_H
 
 #include "global.h"
-// #include "queue.h"
+#include "queue.h"
 
 void allocate_frames(Process *proc);
 void deallocate_frames(Process *proc);
