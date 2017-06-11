@@ -13,12 +13,12 @@ int main(int argc, char const *argv[]) {
 
     if (argc == 2 && !strcmp(argv[1], "wait")) {
         policy = WAIT;
-        init_queue(&queue);
     }
 
 	srand(time(NULL));
 	init_memory(&mem);
     init_proc_table();
+    init_queue(&queue);
     prompt_loop();
 
 	return 0;

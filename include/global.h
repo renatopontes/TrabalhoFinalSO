@@ -40,7 +40,7 @@
 #define BOLD            "\x1B[1m"
 
 #define INFO_OK			GREEN "   ✔   " RESET
-#define INFO_WARN		WHITE "   🛈   " RESET
+#define INFO_WARN		"   🛈   "
 #define INFO_ERR		RED "   ✘   " RESET
 
 #define CHECK_PTR(p) {\

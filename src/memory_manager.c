@@ -147,7 +147,6 @@ void update() {
     Process *next_proc = NULL;
     if (queue_size(queue))
         next_proc = queue_top(queue);
-
     for (size_t i = 0, k = 0; k < proc_table_size; i++) {
         Process *proc = proc_table->table[i];
         
