@@ -61,6 +61,12 @@ void init_proc_table() {
     proc_table->first_available_pid = 0;
 }
 
+void init_proc_concurrency() {
+    sem_init(&memoryAccess, 0, 0);
+    pthread_mutex_init(&memoryMutex, NULL);
+    stop = 0;
+}
+
 void init_process(Process **proc, size_t size) {
     *proc = (Process *) malloc(sizeof(Process));
     CHECK_PTR(*proc);
@@ -86,6 +92,7 @@ void proc_load(size_t size) {
 
     init_process(&proc, size);
     proc_table_add(proc);
+    proc_thread_init(proc);
     printf(INFO_OK "Novo processo P%03d criado (%lu B, %lu páginas, %d seg)\n",
         proc->pid, proc->proc_size, proc->page_table->size, proc->exec_time);
 
@@ -96,6 +103,24 @@ void proc_load(size_t size) {
     } else {
         printf(INFO_WARN "P%03d foi colocado na fila.\n", proc->pid);
         queue_push(queue, proc);
+    }
+}
+
+void proc_thread_func(void *args) {
+    Process *proc = (Process*) args;
+    addr_t addr;
+    while (!stop) {
+        sem_wait(&memoryAccess);
+        pthread_mutex_lock(&memoryMutex);
+        addr = rand() % proc->proc_size;
+        translate_relative_address(proc->pid, addr);
+        pthread_mutex_unlock(&memoryMutex);
+    }
+}
+
+void proc_thread_init(Process *proc) {
+    if (proc) {
+        pthread_create(&(proc->thread), NULL, (void *)(void *)proc_thread_func, (void *) &proc);
     }
 }
 
@@ -129,7 +154,7 @@ void translate_relative_address(pid_t pid, addr_t rel_addr) {
     addr_t page = rel_addr >> FRAME_SIZE_PWR;
     addr_t offset = rel_addr & (FRAME_SIZE-1);
 
-    printf(INFO_WARN "P%03d referencia endereço %lu\n", pid, (uint64_t)rel_addr);
+    printf(INFO_WARN "P%03d referencia endereço %llu\n", pid, (uint64_t)rel_addr);
 
     if (page*FRAME_SIZE + offset >= proc_table->table[pid]->proc_size) {
         printf(INFO_ERR "P%03d: segmentation fault\n\n", pid);
@@ -138,7 +163,7 @@ void translate_relative_address(pid_t pid, addr_t rel_addr) {
 
     frame_t frame = proc_table->table[pid]->page_table->table[page];
     addr_t abs_addr = (frame << FRAME_SIZE_PWR) + offset;
-    printf(INFO_OK "Endereço físico %lu (frame: %lu, offset: %lu)\n\n",
+    printf(INFO_OK "Endereço físico %llu (frame: %llu, offset: %llu)\n\n",
         (uint64_t) abs_addr, (uint64_t)frame, (uint64_t)offset);
 }
 
@@ -147,6 +172,7 @@ void update() {
     Process *next_proc = NULL;
     if (queue_size(queue))
         next_proc = queue_top(queue);
+
     for (size_t i = 0, k = 0; k < proc_table_size; i++) {
         Process *proc = proc_table->table[i];
         
@@ -168,6 +194,7 @@ void update() {
 
             printf(INFO_WARN "%lu frames livres\n\n", mem->free_frames);
             usleep(PAUSE_BETWEEN_INFO);
+            stop = 1;
         }
 
         while (next_proc && mem->free_frames*FRAME_SIZE >= next_proc->proc_size) {
@@ -183,6 +210,15 @@ void update() {
             else
                 next_proc = NULL; 
             usleep(PAUSE_BETWEEN_INFO);
+        }
+    }
+    for (size_t i = 0, k = 0; k < proc_table_size; i++) {
+        Process *proc = proc_table->table[i];
+        
+        if (proc) k++;
+
+        if (proc && proc->start_time != -1) {
+            sem_post(&memoryAccess);
         }
     }
 }

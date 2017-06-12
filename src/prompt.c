@@ -146,7 +146,7 @@ void prompt_loop() {
             // addr_t logical;
             pid_t id;
             addr_t a, b;
-            if (sscanf(&buff[strlen(cmd)], "%d %lu %lu", &id, &a, &b) == 3);
+            if (sscanf(&buff[strlen(cmd)], "%d %llu %llu", &id, &a, &b) == 3);
             else translate_relative_address(id, a);
         }
         else if (!strcmp(cmd, "s") || !strcmp(cmd, "step")) {

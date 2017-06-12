@@ -18,6 +18,7 @@ int main(int argc, char const *argv[]) {
     srand(time(NULL));
     init_memory(&mem);
     init_proc_table();
+    init_proc_concurrency();
     init_queue(&queue);
     prompt_loop();
 

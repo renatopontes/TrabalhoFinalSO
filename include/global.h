@@ -12,6 +12,7 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <semaphore.h>
 
 #define ARCH 16
 #define MEM_SIZE (1<<ARCH)
@@ -79,6 +80,7 @@ typedef struct Process {
 	int32_t exec_time;
     int32_t start_time;
 	Page_table *page_table;
+	pthread_t thread;
 } Process;
 
 typedef struct Process_table {
