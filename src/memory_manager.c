@@ -2,7 +2,8 @@
 
 sem_t *memoryAccess;
 pthread_mutex_t memoryMutex, processMutex;
-int stop, total;
+int total;
+pid_t stop;
 
 void allocate_frames(Process *proc) {
     size_t k = 0;
@@ -123,7 +124,7 @@ void proc_thread_func(void *args) {
     srand(time(NULL));
     Process *proc = (Process*) args;
     addr_t addr;
-    while (proc && proc->exec_time + proc->start_time > step) {
+    while (proc && proc->exec_time + proc->start_time > step && stop != proc->pid) {
         // sem_wait(memoryAccess);
         pthread_mutex_lock(&memoryMutex);
         pthread_mutex_lock(&processMutex);
@@ -134,8 +135,9 @@ void proc_thread_func(void *args) {
         }
         pthread_mutex_unlock(&processMutex);
         pthread_mutex_unlock(&memoryMutex);
-        usleep(PAUSE_STEP);
+        usleep(PAUSE_THREAD);
     }
+    stop = 0;
 }
 
 void proc_thread_init(Process *proc) {
@@ -204,10 +206,13 @@ void update() {
         if (proc && proc->start_time != -1 && proc->exec_time + proc->start_time <= step) {
             Page_table *pt = proc->page_table;
 
+            stop = proc->pid;
+            pthread_join(proc->thread, NULL);
+
+            pthread_mutex_lock(&processMutex);
             printf(INFO_WARN "P%03d terminou. Desalocando %lu frame%s.\n",
                 proc->pid, pt->size, pt->size > 1 ? "s" : "");
             
-            pthread_mutex_lock(&processMutex);
             deallocate_frames(proc_table->table[i]);
             free(proc_table->table[i]);
             
@@ -215,9 +220,9 @@ void update() {
             
             if (i < proc_table->first_available_pid)
                 proc_table->first_available_pid = i;
-            pthread_mutex_unlock(&processMutex);
 
             printf(INFO_WARN "%lu frames livres\n\n", mem->free_frames);
+            pthread_mutex_unlock(&processMutex);
             usleep(PAUSE_BETWEEN_INFO);
         }
 
