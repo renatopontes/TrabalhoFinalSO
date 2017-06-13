@@ -157,7 +157,7 @@ void translate_relative_address(pid_t pid, addr_t rel_addr) {
 
 void random_request() {
     uint64_t rel_addr;
-    int prob = rand() % 100 + 1;
+    int prob;
     int rand_pid = rand() % proc_table->allc;
 
     if (!proc_table->size) return;
@@ -167,7 +167,9 @@ void random_request() {
 
     Process *rproc = proc_table->table[rand_pid];
 
+    prob = rand() % 100 + 1;
     if (prob <= REF_PROB) {
+        prob = rand() % 100 + 1;
         if (prob <= SEGFAULT_PROB)
             rel_addr = rproc->proc_size + rand() % (MEM_SIZE - rproc->proc_size);
         else

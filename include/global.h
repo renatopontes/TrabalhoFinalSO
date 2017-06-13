@@ -22,7 +22,7 @@
 #define GROWTH_RATE 1.5
 #define MAX_EXEC_TIME 16
 #define SEGFAULT_PROB 2
-#define REF_PROB 20
+#define REF_PROB 15
 #define FRAMES_PER_LINE 12
 #define DENY 0
 #define WAIT 1
