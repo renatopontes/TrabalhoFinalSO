@@ -18,8 +18,8 @@ void proc_thread_func(void *args);
 void translate_relative_address(pid_t pid, addr_t rel_addr);
 void update();
 
-extern sem_t memoryAccess;
-extern pthread_mutex_t memoryMutex;
+extern sem_t *memoryAccess;
+extern pthread_mutex_t memoryMutex, processMutex;
 extern int stop;
 
 #endif

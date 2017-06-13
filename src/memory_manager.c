@@ -1,7 +1,7 @@
 #include "memory_manager.h"
 
-sem_t memoryAccess;
-pthread_mutex_t memoryMutex;
+sem_t *memoryAccess;
+pthread_mutex_t memoryMutex, processMutex;
 int stop;
 
 void allocate_frames(Process *proc) {
@@ -66,8 +66,14 @@ void init_proc_table() {
 }
 
 void init_proc_concurrency() {
-    sem_init(&memoryAccess, 0, 0);
+    #ifdef __APPLE__
+        memoryAccess = sem_open("semaphore", O_CREAT, 0644, 0);
+        CHECK_PTR(memoryAccess);
+    #elif __linux__
+        sem_init(memoryAccess, 0, 0);
+    #endif
     pthread_mutex_init(&memoryMutex, NULL);
+    pthread_mutex_init(&processMutex, NULL);
     stop = 0;
 }
 
@@ -108,24 +114,30 @@ void proc_load(size_t size) {
         printf(INFO_WARN "P%03d foi colocado na fila.\n", proc->pid);
         queue_push(queue, proc);
     }
+    usleep(PAUSE_BETWEEN_INFO);
 }
 
 void proc_thread_func(void *args) {
     srand(time(NULL));
     Process *proc = (Process*) args;
     addr_t addr;
-    while (!stop) {
-        sem_wait(&memoryAccess);
+    while (proc && proc->exec_time + proc->start_time > step) {
+        sem_wait(memoryAccess);
         pthread_mutex_lock(&memoryMutex);
-        addr = rand() % proc->proc_size;
-        translate_relative_address(proc->pid, addr);
+        pthread_mutex_lock(&processMutex);
+        if (proc) {
+            addr = rand() % proc->proc_size;
+            translate_relative_address(proc->pid, addr);
+        }
+        pthread_mutex_unlock(&processMutex);
         pthread_mutex_unlock(&memoryMutex);
+        usleep(PAUSE_STEP);
     }
 }
 
 void proc_thread_init(Process *proc) {
     if (proc) {
-        pthread_create(&(proc->thread), NULL, (void *)(void *)proc_thread_func, (void *) &proc);
+        pthread_create(&(proc->thread), NULL, (void *)(void *)proc_thread_func, (void *) proc);
     }
 }
 
@@ -189,6 +201,7 @@ void update() {
             printf(INFO_WARN "P%03d terminou. Desalocando %lu frame%s.\n",
                 proc->pid, pt->size, pt->size > 1 ? "s" : "");
             
+            pthread_mutex_lock(&processMutex);
             deallocate_frames(proc_table->table[i]);
             free(proc_table->table[i]);
             
@@ -196,10 +209,10 @@ void update() {
             
             if (i < proc_table->first_available_pid)
                 proc_table->first_available_pid = i;
+            pthread_mutex_unlock(&processMutex);
 
             printf(INFO_WARN "%lu frames livres\n\n", mem->free_frames);
             usleep(PAUSE_BETWEEN_INFO);
-            stop = 1;
         }
 
         while (next_proc && mem->free_frames*FRAME_SIZE >= next_proc->proc_size) {
@@ -223,7 +236,7 @@ void update() {
         if (proc) k++;
 
         if (proc && proc->start_time != -1) {
-            sem_post(&memoryAccess);
+            sem_post(memoryAccess);
         }
     }
 }
