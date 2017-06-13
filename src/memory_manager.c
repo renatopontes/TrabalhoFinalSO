@@ -105,12 +105,12 @@ void proc_load(size_t size) {
 
     init_process(&proc, size);
     proc_table_add(proc);
-    proc_thread_init(proc);
     printf(INFO_OK "Novo processo P%03d criado (%lu B, %lu páginas, %d seg)\n",
         proc->pid, proc->proc_size, proc->page_table->size, proc->exec_time);
 
     if (proc->page_table->size <= mem->free_frames) {
         allocate_frames(proc);
+        proc_thread_init(proc);
         printf(INFO_OK "P%03d está carregado na memória.\n", proc->pid);
         printf(INFO_WARN "%lu frames livres\n", mem->free_frames);
     } else {
@@ -128,14 +128,14 @@ void proc_thread_func(void *args) {
         // sem_wait(memoryAccess);
         pthread_mutex_lock(&memoryMutex);
         pthread_mutex_lock(&processMutex);
-        if (proc && total > 0) {
+        if (proc && proc->start_time != -1 && total > 0) {
             addr = rand() % proc->proc_size;
             translate_relative_address(proc->pid, addr);
             total--;
         }
         pthread_mutex_unlock(&processMutex);
         pthread_mutex_unlock(&memoryMutex);
-        usleep(PAUSE_THREAD);
+        usleep(PAUSE_STEP * 2); 
     }
     stop = 0;
 }
@@ -178,7 +178,7 @@ void translate_relative_address(pid_t pid, addr_t rel_addr) {
 
     printf(INFO_WARN "P%03d referencia endereço %lu\n", pid, (uint64_t)rel_addr);
 
-    if (page*FRAME_SIZE + offset >= proc_table->table[pid]->proc_size) {
+    if (proc_table->table[pid]->start_time != -1 && page*FRAME_SIZE + offset >= proc_table->table[pid]->proc_size) {
         printf(INFO_ERR "P%03d: segmentation fault\n\n", pid);
         return;
     }
@@ -190,19 +190,13 @@ void translate_relative_address(pid_t pid, addr_t rel_addr) {
 }
 
 void update() {
-    size_t proc_table_size = proc_table->size;
     Process *next_proc = NULL;
     if (queue_size(queue))
         next_proc = queue_top(queue);
 
-    int size;
-
-    for (size_t i = 0, k = 0; k < proc_table_size; i++) {
+    for (size_t i = 0; i < proc_table->allc; i++) {
         Process *proc = proc_table->table[i];
         
-        if (proc) k++;
-        size = k;
-
         if (proc && proc->start_time != -1 && proc->exec_time + proc->start_time <= step) {
             Page_table *pt = proc->page_table;
 
@@ -232,6 +226,7 @@ void update() {
                 next_proc->pid, next_proc->proc_size, pt->size, next_proc->exec_time);
             queue_pop(queue);
             allocate_frames(next_proc);
+            proc_thread_init(proc);
             printf(INFO_OK "P%03d está carregado na memória.\n", next_proc->pid);
             printf(INFO_WARN "%lu frames livres\n\n", mem->free_frames);
             if (queue_size(queue))
@@ -242,6 +237,14 @@ void update() {
         }
     }
     pthread_mutex_lock(&memoryMutex);
-    total = size;
+    total = proc_table->size;
     pthread_mutex_unlock(&memoryMutex);
+    while (1) {
+        pthread_mutex_lock(&memoryMutex);
+        if (total == 0) {
+            pthread_mutex_unlock(&memoryMutex);
+            break;
+        }
+        pthread_mutex_unlock(&memoryMutex);
+    }
 }
