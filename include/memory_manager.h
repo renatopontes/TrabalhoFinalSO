@@ -20,6 +20,6 @@ void update();
 
 extern sem_t *memoryAccess;
 extern pthread_mutex_t memoryMutex, processMutex;
-extern int stop;
+extern int stop, total;
 
 #endif

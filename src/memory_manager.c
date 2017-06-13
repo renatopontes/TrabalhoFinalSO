@@ -2,7 +2,7 @@
 
 sem_t *memoryAccess;
 pthread_mutex_t memoryMutex, processMutex;
-int stop;
+int stop, total;
 
 void allocate_frames(Process *proc) {
     size_t k = 0;
@@ -67,14 +67,16 @@ void init_proc_table() {
 
 void init_proc_concurrency() {
     #ifdef __APPLE__
-        memoryAccess = sem_open("semaphore", O_CREAT, 0644, 0);
+        memoryAccess = sem_open("semaphore", O_CREAT, 0777, 0);
         CHECK_PTR(memoryAccess);
     #elif __linux__
+        memoryAccess = (sem_t *) malloc(sizeof(sem_t));
         sem_init(memoryAccess, 0, 0);
     #endif
     pthread_mutex_init(&memoryMutex, NULL);
     pthread_mutex_init(&processMutex, NULL);
     stop = 0;
+    total = 0;
 }
 
 void init_process(Process **proc, size_t size) {
@@ -122,12 +124,13 @@ void proc_thread_func(void *args) {
     Process *proc = (Process*) args;
     addr_t addr;
     while (proc && proc->exec_time + proc->start_time > step) {
-        sem_wait(memoryAccess);
+        // sem_wait(memoryAccess);
         pthread_mutex_lock(&memoryMutex);
         pthread_mutex_lock(&processMutex);
-        if (proc) {
+        if (proc && total > 0) {
             addr = rand() % proc->proc_size;
             translate_relative_address(proc->pid, addr);
+            total--;
         }
         pthread_mutex_unlock(&processMutex);
         pthread_mutex_unlock(&memoryMutex);
@@ -190,10 +193,13 @@ void update() {
     if (queue_size(queue))
         next_proc = queue_top(queue);
 
+    int size;
+
     for (size_t i = 0, k = 0; k < proc_table_size; i++) {
         Process *proc = proc_table->table[i];
         
         if (proc) k++;
+        size = k;
 
         if (proc && proc->start_time != -1 && proc->exec_time + proc->start_time <= step) {
             Page_table *pt = proc->page_table;
@@ -230,13 +236,7 @@ void update() {
             usleep(PAUSE_BETWEEN_INFO);
         }
     }
-    for (size_t i = 0, k = 0; k < proc_table_size; i++) {
-        Process *proc = proc_table->table[i];
-        
-        if (proc) k++;
-
-        if (proc && proc->start_time != -1) {
-            sem_post(memoryAccess);
-        }
-    }
+    pthread_mutex_lock(&memoryMutex);
+    total = size;
+    pthread_mutex_unlock(&memoryMutex);
 }
