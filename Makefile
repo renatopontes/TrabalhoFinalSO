@@ -16,7 +16,7 @@ CC       = gcc
 CFLAGS   = -std=c99 -Wall -I. -I include -g
 
 LINKER   = gcc
-LFLAGS   = -Wall -I. -lpthread
+LFLAGS   = -Wall -I.
 
 # change these to proper directories where each file should be
 SRCDIR   = src

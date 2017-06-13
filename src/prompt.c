@@ -126,8 +126,10 @@ void prompt_loop() {
     while (1) {
         print_time("");
         printf("> ");
+        printf(YELLOW);
         CHECK_PTR(fgets(buff, BUFFER_SIZE, stdin));
         buff[strcspn(buff, "\n")] = '\0';
+        printf(RESET);
 
         sscanf(buff, "%s", cmd);
 
