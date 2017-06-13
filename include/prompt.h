@@ -14,5 +14,6 @@ void print_memory();
 void print_page_table(pid_t pid);
 void print_time(char end[]);
 void prompt_loop();
+void print_queue();
 
 #endif

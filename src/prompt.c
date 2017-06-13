@@ -139,6 +139,8 @@ void prompt_loop() {
             print_help();
         else if (!strcmp(cmd, "i") || !strcmp(cmd, "info"))
             print_system_info();
+        else if (!strcmp(cmd, "queue"))
+            print_queue();
         else if (!strcmp(cmd, "l") || !strcmp(cmd, "load")) {
             size_t proc_size = 0;
             sscanf(&buff[strlen(cmd)], "%lu", &proc_size);
@@ -182,4 +184,14 @@ void prompt_loop() {
             cmd[0] = '\0';
         }
     }
+}
+
+void print_queue() {
+    printf("Fila de processos:\n");
+    Node *curr = queue->list->first;
+    while (curr != NULL) {
+        printf("P%03d  ", curr->proc->pid);
+        curr = curr->next;
+    }
+    puts("");
 }
