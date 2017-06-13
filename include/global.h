@@ -27,6 +27,8 @@
 #define WAIT 1
 #define PAUSE_STEP 350000
 #define PAUSE_BETWEEN_INFO 200000
+#define PAUSE_THREAD 300000
+#define SIGUPDATE 30
 
 #define BLACK           "\x1B[30m"
 #define RED             "\x1B[31m"
