@@ -11,6 +11,7 @@ void print_help() {
         " mem        Exibe os frames da memória\n\n"
         " paget      Exibe tabela de páginas do processo <id>\n"
         "            id: PID do processo\n\n"
+        " queue      Exibe fila de processos em espera para alocação\n\n"
         " s, step    Continua a simulação por <t> unidades de tempo\n"
         "            t: quantidade de tempo para rodar. (default: 1)\n\n"
         " l, load    Carrega na memória um processo de tamanho <b>\n"
@@ -52,7 +53,8 @@ void print_system_info() {
         "  Número de frames: %d\n"
         "  Processos na memória: %lu\n"
         "  Total de processos: %lu\n"
-        , policy == WAIT ? "WAIT" : "DENY", MEM_SIZE, FRAME_SIZE, N_FRAMES, mem->processes, proc_table->size
+        "  Número de frames livres: %lu\n"
+        , policy == WAIT ? "WAIT" : "DENY", MEM_SIZE, FRAME_SIZE, N_FRAMES, mem->processes, proc_table->size, mem->free_frames
     );
     print_separator('=');
 }
@@ -187,11 +189,21 @@ void prompt_loop() {
 }
 
 void print_queue() {
-    printf("Fila de processos:\n");
+    print_separator('=');
+    printf(BOLD " Fila de processos:\n" RESET);
+    print_separator('-');
+    print_separator(' ');
+    printf("  ");
     Node *curr = queue->list->first;
-    while (curr != NULL) {
-        printf("P%03d  ", curr->proc->pid);
-        curr = curr->next;
+    if (!curr) {
+        printf("Fila vazia!");
+    } else {
+        while (curr != NULL) {
+            printf("P%03d  ", curr->proc->pid);
+            curr = curr->next;
+        }
+        puts("");
     }
-    puts("");
+    print_separator(' ');
+    print_separator('=');
 }
