@@ -1,5 +1,9 @@
 #include "memory_manager.h"
 
+sem_t memoryAccess;
+pthread_mutex_t memoryMutex;
+int stop;
+
 void allocate_frames(Process *proc) {
     size_t k = 0;
 
@@ -107,6 +111,7 @@ void proc_load(size_t size) {
 }
 
 void proc_thread_func(void *args) {
+    srand(time(NULL));
     Process *proc = (Process*) args;
     addr_t addr;
     while (!stop) {
@@ -154,7 +159,7 @@ void translate_relative_address(pid_t pid, addr_t rel_addr) {
     addr_t page = rel_addr >> FRAME_SIZE_PWR;
     addr_t offset = rel_addr & (FRAME_SIZE-1);
 
-    printf(INFO_WARN "P%03d referencia endereço %llu\n", pid, (uint64_t)rel_addr);
+    printf(INFO_WARN "P%03d referencia endereço %lu\n", pid, (uint64_t)rel_addr);
 
     if (page*FRAME_SIZE + offset >= proc_table->table[pid]->proc_size) {
         printf(INFO_ERR "P%03d: segmentation fault\n\n", pid);
@@ -163,7 +168,7 @@ void translate_relative_address(pid_t pid, addr_t rel_addr) {
 
     frame_t frame = proc_table->table[pid]->page_table->table[page];
     addr_t abs_addr = (frame << FRAME_SIZE_PWR) + offset;
-    printf(INFO_OK "Endereço físico %llu (frame: %llu, offset: %llu)\n\n",
+    printf(INFO_OK "Endereço físico %lu (frame: %lu, offset: %lu)\n\n",
         (uint64_t) abs_addr, (uint64_t)frame, (uint64_t)offset);
 }
 
