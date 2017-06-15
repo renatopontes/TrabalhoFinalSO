@@ -53,8 +53,9 @@ void print_system_info() {
         "  Número de frames: %d\n"
         "  Processos na memória: %lu\n"
         "  Total de processos: %lu\n"
+        "  Número de frames livres: %lu\n"
         , policy == WAIT ? "WAIT" : "DENY", threads ? "MULTI-THREAD" : "SINGLE-THREAD",
-        MEM_SIZE, FRAME_SIZE, N_FRAMES, mem->processes, proc_table->size
+        MEM_SIZE, FRAME_SIZE, N_FRAMES, mem->processes, proc_table->size, mem->free_frames
     );
     print_separator('=');
 }
