@@ -4,6 +4,41 @@ pthread_mutex_t memoryMutex, processMutex;
 int total;
 pid_t stop;
 
+/* ------------ Thread-related functions ------------ */
+
+void init_proc_concurrency() {
+    pthread_mutex_init(&memoryMutex, NULL);
+    pthread_mutex_init(&processMutex, NULL);
+    stop = 0;
+    total = 0;
+}
+
+void proc_thread_func(void *args) {
+    srand(time(NULL));
+    Process *proc = (Process*) args;
+
+    while (proc && proc->exec_time + proc->start_time > step && stop != proc->pid) {
+        pthread_mutex_lock(&memoryMutex);
+        pthread_mutex_lock(&processMutex);
+        if (proc && total > 0) {
+            memory_ref(proc);
+            total--;
+        }
+        pthread_mutex_unlock(&processMutex);
+        pthread_mutex_unlock(&memoryMutex);
+        usleep(PAUSE_STEP * 2); 
+    }
+    stop = 0;
+}
+
+void proc_thread_init(Process *proc) {
+    if (proc) {
+        pthread_create(&(proc->thread), NULL, (void *)(void *)proc_thread_func, (void *) proc);
+    }
+}
+
+/* ------------ General functions ------------ */
+
 void allocate_frames(Process *proc) {
     size_t k = 0;
 
@@ -64,13 +99,6 @@ void init_proc_table() {
     proc_table->first_available_pid = 0;
 }
 
-void init_proc_concurrency() {
-    pthread_mutex_init(&memoryMutex, NULL);
-    pthread_mutex_init(&processMutex, NULL);
-    stop = 0;
-    total = 0;
-}
-
 void init_process(Process **proc, size_t size) {
     *proc = (Process *) malloc(sizeof(Process));
     CHECK_PTR(*proc);
@@ -81,6 +109,7 @@ void init_process(Process **proc, size_t size) {
 
     init_page_table(*proc);
 }
+
 
 void proc_load(size_t size) {
     Process *proc;
@@ -101,7 +130,8 @@ void proc_load(size_t size) {
 
     if (proc->page_table->size <= mem->free_frames) {
         allocate_frames(proc);
-        proc_thread_init(proc);
+        if (threads)
+            proc_thread_init(proc);
         printf(INFO_OK "P%03d está carregado na memória.\n", proc->pid);
         printf(INFO_WARN "%lu frames livres\n", mem->free_frames);
     } else {
@@ -109,46 +139,6 @@ void proc_load(size_t size) {
         queue_push(queue, proc);
     }
     usleep(PAUSE_BETWEEN_INFO);
-}
-
-void memory_ref(Process *proc) {
-    uint64_t rel_addr;
-    int prob;
-
-    prob = rand() % 100 + 1;
-    if (prob <= REF_PROB) {
-        prob = rand() % 100 + 1;
-        if (prob <= SEGFAULT_PROB)
-            rel_addr = proc->proc_size + rand() % (MEM_SIZE - proc->proc_size);
-        else
-            rel_addr = rand() % proc->proc_size;
-
-        translate_relative_address(proc->pid, rel_addr);
-    }
-}
-
-void proc_thread_func(void *args) {
-    srand(time(NULL));
-    Process *proc = (Process*) args;
-
-    while (proc && proc->exec_time + proc->start_time > step && stop != proc->pid) {
-        pthread_mutex_lock(&memoryMutex);
-        pthread_mutex_lock(&processMutex);
-        if (proc && total > 0) {
-            memory_ref(proc);
-            total--;
-        }
-        pthread_mutex_unlock(&processMutex);
-        pthread_mutex_unlock(&memoryMutex);
-        usleep(PAUSE_STEP * 2); 
-    }
-    stop = 0;
-}
-
-void proc_thread_init(Process *proc) {
-    if (proc) {
-        pthread_create(&(proc->thread), NULL, (void *)(void *)proc_thread_func, (void *) proc);
-    }
 }
 
 void proc_table_add(Process *proc) {
@@ -204,32 +194,66 @@ void translate_relative_address(pid_t pid, addr_t rel_addr) {
         (uint64_t) abs_addr, (uint64_t)frame, (uint64_t)offset);
 }
 
+void memory_ref(Process *proc) {
+    uint64_t rel_addr;
+    int prob;
+
+    prob = rand() % 100 + 1;
+    if (prob <= REF_PROB) {
+        prob = rand() % 100 + 1;
+        if (prob <= SEGFAULT_PROB)
+            rel_addr = proc->proc_size + rand() % (MEM_SIZE - proc->proc_size);
+        else
+            rel_addr = rand() % proc->proc_size;
+
+        translate_relative_address(proc->pid, rel_addr);
+    }
+}
+
+void random_request() {
+    int rand_pid = rand() % proc_table->allc;
+
+    if (!proc_table->size) return;
+    while (!proc_table->table[rand_pid] || proc_table->table[rand_pid]->start_time == -1)
+        rand_pid = rand() % proc_table->allc;
+
+    memory_ref(proc_table->table[rand_pid]);
+}
+
 void update() {
     Process *next_proc = NULL;
     if (queue_size(queue))
         next_proc = queue_top(queue);
 
-    for (size_t i = 0; i < proc_table->allc; i++) {
+    for (size_t i = 0; i < proc_table->allc && proc_table->size; i++) {
         Process *proc = proc_table->table[i];
+
+        if (!threads)
+            random_request();
         
         if (proc && proc->start_time != -1 && proc->exec_time + proc->start_time <= step) {
             Page_table *pt = proc->page_table;
 
-            stop = proc->pid;
-            pthread_join(proc->thread, NULL);
+            if (threads) {
+                stop = proc->pid;
+                pthread_join(proc->thread, NULL);
+                pthread_mutex_lock(&processMutex);
+            }
 
-            pthread_mutex_lock(&processMutex);
             printf(INFO_WARN "P%03d terminou. Desalocando %lu frame%s.\n",
                 proc->pid, pt->size, pt->size > 1 ? "s" : "");
             
-            deallocate_frames(proc_table->table[i]);
-            proc_table_remove(proc_table->table[i]);
+            deallocate_frames(proc);
+            proc_table_remove(proc);
             
             if (i < proc_table->first_available_pid)
                 proc_table->first_available_pid = i;
 
             printf(INFO_WARN "%lu frames livres\n\n", mem->free_frames);
-            pthread_mutex_unlock(&processMutex);
+
+            if (threads)
+                pthread_mutex_unlock(&processMutex);
+
             usleep(PAUSE_BETWEEN_INFO);
         }
 
@@ -239,7 +263,10 @@ void update() {
                 next_proc->pid, next_proc->proc_size, pt->size, next_proc->exec_time);
             queue_pop(queue);
             allocate_frames(next_proc);
-            proc_thread_init(proc);
+            
+            if (threads)
+                proc_thread_init(proc);
+
             printf(INFO_OK "P%03d está carregado na memória.\n", next_proc->pid);
             printf(INFO_WARN "%lu frames livres\n\n", mem->free_frames);
             if (queue_size(queue))
@@ -249,15 +276,18 @@ void update() {
             usleep(PAUSE_BETWEEN_INFO);
         }
     }
-    pthread_mutex_lock(&memoryMutex);
-    total = proc_table->size;
-    pthread_mutex_unlock(&memoryMutex);
-    while (1) {
+
+    if (threads) {
         pthread_mutex_lock(&memoryMutex);
-        if (total == 0) {
-            pthread_mutex_unlock(&memoryMutex);
-            break;
-        }
+        total = proc_table->size;
         pthread_mutex_unlock(&memoryMutex);
+        while (1) {
+            pthread_mutex_lock(&memoryMutex);
+            if (total == 0) {
+                pthread_mutex_unlock(&memoryMutex);
+                break;
+            }
+            pthread_mutex_unlock(&memoryMutex);
+        }
     }
 }

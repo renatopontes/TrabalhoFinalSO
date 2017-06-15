@@ -98,6 +98,7 @@ typedef struct Queue Queue;
 
 extern uint32_t step;
 extern uint8_t policy;
+extern uint8_t threads;
 extern Memory *mem;
 extern Process_table *proc_table;
 extern Queue *queue;

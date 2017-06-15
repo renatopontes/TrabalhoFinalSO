@@ -46,13 +46,14 @@ void print_system_info() {
     printf(BOLD " Informações do sistema\n" RESET);
     print_separator('-');
     printf(
-        "  Modo %s\n"
+        "  Modo %s / %s\n"
         "  Tamanho da memória principal: %d bytes\n"
         "  Tamanho do frame: %d bytes\n"
         "  Número de frames: %d\n"
         "  Processos na memória: %lu\n"
         "  Total de processos: %lu\n"
-        , policy == WAIT ? "WAIT" : "DENY", MEM_SIZE, FRAME_SIZE, N_FRAMES, mem->processes, proc_table->size
+        , policy == WAIT ? "WAIT" : "DENY", threads ? "MULTI-THREAD" : "SINGLE-THREAD",
+        MEM_SIZE, FRAME_SIZE, N_FRAMES, mem->processes, proc_table->size
     );
     print_separator('=');
 }
