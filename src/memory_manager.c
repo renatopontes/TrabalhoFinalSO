@@ -177,6 +177,16 @@ void proc_table_remove(Process *proc) {
     proc_table->size--;
 }
 
+void kill_process(Process *proc) {
+    if (threads) {
+        stop = proc->pid;
+        pthread_join(proc->thread, NULL);
+    }
+
+    deallocate_frames(proc);
+    proc_table_remove(proc);
+}
+
 void translate_relative_address(pid_t pid, addr_t rel_addr) {
     addr_t page = rel_addr >> FRAME_SIZE_PWR;
     addr_t offset = rel_addr & (FRAME_SIZE-1);
@@ -184,7 +194,9 @@ void translate_relative_address(pid_t pid, addr_t rel_addr) {
     printf(INFO_WARN "P%03d referencia endereço %lu\n", pid, (uint64_t)rel_addr);
 
     if (proc_table->table[pid]->start_time != -1 && page*FRAME_SIZE + offset >= proc_table->table[pid]->proc_size) {
-        printf(INFO_ERR "P%03d: segmentation fault\n\n", pid);
+        printf(INFO_ERR "P%03d: segmentation fault\n", pid);
+        kill_process(proc_table->table[pid]);
+        printf(INFO_ERR "P%03d foi terminado\n\n", pid);
         return;
     }
 
@@ -234,17 +246,13 @@ void update() {
         if (proc && proc->start_time != -1 && proc->exec_time + proc->start_time <= step) {
             Page_table *pt = proc->page_table;
 
-            if (threads) {
-                stop = proc->pid;
-                pthread_join(proc->thread, NULL);
-                pthread_mutex_lock(&processMutex);
-            }
+            kill_process(proc_table->table[i]);
 
-            printf(INFO_WARN "P%03d terminou. Desalocando %lu frame%s.\n",
-                proc->pid, pt->size, pt->size > 1 ? "s" : "");
-            
-            deallocate_frames(proc);
-            proc_table_remove(proc);
+            if (threads)
+                pthread_mutex_lock(&processMutex);
+
+            printf(INFO_WARN "P%03lu terminou. %lu frame%s desalocados.\n",
+                i, pt->size, pt->size > 1 ? "s" : "");
             
             if (i < proc_table->first_available_pid)
                 proc_table->first_available_pid = i;
