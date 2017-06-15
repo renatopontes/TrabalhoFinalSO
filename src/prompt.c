@@ -10,6 +10,7 @@ void print_help() {
         " i, info    Exibe informações sobre o sistema\n\n"
         " mem        Exibe os frames da memória\n\n"
         " paget      Exibe tabela de páginas do processo <id>\n"
+        " queue      Exibe fila de processos em espera para alocação\n\n"
         "            id: PID do processo\n\n"
         " s, step    Continua a simulação por <t> unidades de tempo\n"
         "            t: quantidade de tempo para rodar. (default: 1)\n\n"
@@ -160,6 +161,8 @@ void prompt_loop() {
             print_help();
         else if (!strcmp(cmd, "i") || !strcmp(cmd, "info"))
             print_system_info();
+        else if (!strcmp(cmd, "queue"))
+            print_queue();
         else if (!strcmp(cmd, "l") || !strcmp(cmd, "load")) {
             size_t proc_size = 0;
             sscanf(&buff[strlen(cmd)], "%lu", &proc_size);
