@@ -115,6 +115,26 @@ void print_time(char end[]) {
     printf("[%02d:%02d]%s", step / 60, step % 60, end);
 }
 
+void print_queue() {
+    print_separator('=');
+    printf(BOLD " Fila de processos:\n" RESET);
+    print_separator('-');
+    print_separator(' ');
+    printf("  ");
+    Node *curr = queue->list->first;
+    if (!curr) {
+        printf("Fila vazia!");
+    } else {
+        while (curr != NULL) {
+            printf("P%03d  ", curr->proc->pid);
+            curr = curr->next;
+        }
+        puts("");
+    }
+    print_separator(' ');
+    print_separator('=');
+}
+
 void prompt_loop() {
     char buff[BUFFER_SIZE];
     char cmd[BUFFER_SIZE] = {'\0'};
@@ -126,8 +146,10 @@ void prompt_loop() {
     while (1) {
         print_time("");
         printf("> ");
+        printf(YELLOW);
         CHECK_PTR(fgets(buff, BUFFER_SIZE, stdin));
         buff[strcspn(buff, "\n")] = '\0';
+        printf(RESET);
 
         sscanf(buff, "%s", cmd);
 

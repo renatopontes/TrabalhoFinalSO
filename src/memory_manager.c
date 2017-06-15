@@ -1,6 +1,5 @@
 #include "memory_manager.h"
 
-sem_t *memoryAccess;
 pthread_mutex_t memoryMutex, processMutex;
 int total;
 pid_t stop;
@@ -66,13 +65,6 @@ void init_proc_table() {
 }
 
 void init_proc_concurrency() {
-    #ifdef __APPLE__
-        memoryAccess = sem_open("semaphore", O_CREAT, 0777, 0);
-        CHECK_PTR(memoryAccess);
-    #elif __linux__
-        memoryAccess = (sem_t *) malloc(sizeof(sem_t));
-        sem_init(memoryAccess, 0, 0);
-    #endif
     pthread_mutex_init(&memoryMutex, NULL);
     pthread_mutex_init(&processMutex, NULL);
     stop = 0;
@@ -119,17 +111,31 @@ void proc_load(size_t size) {
     usleep(PAUSE_BETWEEN_INFO);
 }
 
+void memory_ref(Process *proc) {
+    uint64_t rel_addr;
+    int prob;
+
+    prob = rand() % 100 + 1;
+    if (prob <= REF_PROB) {
+        prob = rand() % 100 + 1;
+        if (prob <= SEGFAULT_PROB)
+            rel_addr = proc->proc_size + rand() % (MEM_SIZE - proc->proc_size);
+        else
+            rel_addr = rand() % proc->proc_size;
+
+        translate_relative_address(proc->pid, rel_addr);
+    }
+}
+
 void proc_thread_func(void *args) {
     srand(time(NULL));
     Process *proc = (Process*) args;
-    addr_t addr;
+
     while (proc && proc->exec_time + proc->start_time > step && stop != proc->pid) {
-        // sem_wait(memoryAccess);
         pthread_mutex_lock(&memoryMutex);
         pthread_mutex_lock(&processMutex);
-        if (proc && proc->start_time != -1 && total > 0) {
-            addr = rand() % proc->proc_size;
-            translate_relative_address(proc->pid, addr);
+        if (proc && total > 0) {
+            memory_ref(proc);
             total--;
         }
         pthread_mutex_unlock(&processMutex);

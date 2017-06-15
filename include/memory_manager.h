@@ -13,8 +13,10 @@ void init_proc_concurrency();
 void init_process(Process **proc, size_t size);
 void proc_load(size_t size);
 void proc_table_add(Process *proc);
+void proc_table_remove(Process *proc);
 void proc_thread_init(Process *proc);
 void proc_thread_func(void *args);
+void memory_ref(Process *proc);
 void translate_relative_address(pid_t pid, addr_t rel_addr);
 void update();
 
