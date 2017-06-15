@@ -27,7 +27,6 @@ void deallocate_frames(Process *proc) {
         mem->free_frames++;
     }
     mem->processes--;
-    proc_table->size--;
 }
 
 void init_memory() {
@@ -172,6 +171,16 @@ void proc_table_add(Process *proc) {
     proc_table->first_available_pid = newpid;
 }
 
+void proc_table_remove(Process *proc) {
+    if (!proc) return;
+
+    pid_t pid = proc->pid;
+    free(proc_table->table[pid]);
+    proc_table->table[pid] = NULL;
+
+    proc_table->size--;
+}
+
 void translate_relative_address(pid_t pid, addr_t rel_addr) {
     addr_t page = rel_addr >> FRAME_SIZE_PWR;
     addr_t offset = rel_addr & (FRAME_SIZE-1);
@@ -208,9 +217,7 @@ void update() {
                 proc->pid, pt->size, pt->size > 1 ? "s" : "");
             
             deallocate_frames(proc_table->table[i]);
-            free(proc_table->table[i]);
-            
-            proc_table->table[i] = NULL;
+            proc_table_remove(proc_table->table[i]);
             
             if (i < proc_table->first_available_pid)
                 proc_table->first_available_pid = i;
